@@ -1,11 +1,11 @@
-from .SubscriberVariable import SubscriberVariable
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, QTimer, QEvent, QObject
-from PyQt5.QtGui import QPixmap, QColor, QBitmap, QPalette, QBrush
-
-from .widgetStyles import *
-
 import time
+
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QPixmap, QColor, QBitmap
+
+from .SubscriberVariable import SubscriberVariable
+from .widgetStyles import *
 
 
 class QSANullEffect(QGraphicsEffect):
@@ -29,39 +29,26 @@ class QSABaseFrame(QFrame):
     """A rectangular GUI region for a specific purpose"""
     def __init__(self, master=None,
                  row=0, column=0):
-
         super().__init__()
-
         self.master = master
         self.row = row
         self.column = column
 
         self.setFixedWidth(220)
         self.setFixedHeight(50)
-
         self.setStyleSheet(widgetStyle_QSABaseFrame)
-
-    def getReadCommand(self):
-        """Build the command to send when reading a parameter"""
-        return ""
-
-    def getWriteCommand(self):
-        """Build the command to send when writing a parameter"""
-        return ""
 
 
 class QSASplash(QSplashScreen):
     """A splash screen which displays a series of messages at the bottom"""
-    def __init__(self, master=None, image=None, mask=None):
+    def __init__(self, master=None, image_file=None, mask_file=None):
         self.master = master
-        self.imagefile = image
-        self.image = QPixmap(self.imagefile)
+        self.image = QPixmap(image_file)
         super().__init__(self.image, Qt.WindowStaysOnTopHint)
 
         self.setStyleSheet(widgetStyle_splash)
 
-        self.maskfile = mask
-        self.mask = QBitmap(self.maskfile)
+        self.mask = QBitmap(mask_file)
         self.setMask(self.mask)
 
         self.messages = []
@@ -126,12 +113,6 @@ class QSALoginPopup(QSAPopup):
 
         self.callback = callback
 
-    # The username and password
-        self.username = "spencer"
-        self.password = "arrasmith"
-
-        #self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
-
         self.label_logo = QLabel()
         self.pixmap_logo = QPixmap(self.master.get_resource('images/adminmode_300.png'))
         self.label_logo.setPixmap(self.pixmap_logo)
@@ -168,12 +149,10 @@ class QSALoginPopup(QSAPopup):
 
 class QSALogoutPopup(QSAPopup):
     """A popup window to trigger a callback when the button is pressed"""
-    def __init__(self, master=None, callback=None):
+    def __init__(self, callback=None):
         super().__init__()
 
         self.callback = callback
-
-        #self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
 
         self.label_logo = QLabel()
         self.pixmap_logo = QPixmap(self.master.get_resource('images/adminmode_300.png'))
@@ -196,15 +175,15 @@ class QSALogoutPopup(QSAPopup):
 
 class QSATab(QFrame):
     """A GUI region which contains all parameters relevant to one subsystem"""
-    def __init__(self, master=None, serial=None, protocol=None, title="", icon="", index=0, widgets=[], widthActive=160, widthInactive=80):
+    def __init__(self, master=None, serial=None, protocol=None, parent=None, title="", icon="", index=0, widgets=[], widthActive=160, widthInactive=80):
         super().__init__()
 
         self.master = master
         self.serial = serial
         self.protocol = protocol
+        self.parent = parent
 
         self.setContextMenuPolicy(Qt.PreventContextMenu)
-        #self.setAutoFillBackground(False)
 
         self.title = title
         self.label_title = QLabel(title)
@@ -214,7 +193,7 @@ class QSATab(QFrame):
         self.widthActive = widthActive
         self.widthInactive = widthInactive
 
-    # A simple visual representation of the subsystem
+        # A simple visual representation of the subsystem
         self.iconfile = self.master.get_resource(icon)
         self.icon = QLabel()
         self.icon.setAttribute(Qt.WA_TranslucentBackground)
@@ -222,27 +201,24 @@ class QSATab(QFrame):
             self.iconpix = QPixmap(self.iconfile)
             self.icon.setPixmap(self.iconpix)
 
-    # Build the look of the tab for when it is active
+        # Build the look of the tab for when it is active
         self.button_active = QGroupBox()
         self.button_active.setFixedHeight(46)
         self.button_active.setFixedWidth(self.widthActive)
         self.layout_buttonactive = QGridLayout()
-        #self.layout_buttonactive.addWidget(self.icon, 0, 0)
         self.layout_buttonactive.addWidget(self.label_title, 0, 0)
         self.button_active.setLayout(self.layout_buttonactive)
         self.button_active.setStyleSheet(widgetStyle_tabActive)
-        #self.button_active.setAttribute(Qt.WA_TranslucentBackground)
         self.button_active.setContextMenuPolicy(Qt.CustomContextMenu)
         self.button_active.customContextMenuRequested.connect(self.contextMenuEvent)
 
-    # Build the look of the tab for when it is inactive
+        # Build the look of the tab for when it is inactive
         self.button_inactive = QGroupBox()
         self.button_inactive.setFixedHeight(46)
         self.button_inactive.setFixedWidth(self.widthInactive)
         self.layout_buttoninactive = QGridLayout()
         self.button_inactive.setLayout(self.layout_buttoninactive)
         self.layout_buttoninactive.addWidget(self.icon, 0, 0)
-        #self.layout_buttonactive.addWidget(QLabel(title), 0, 1)
         self.button_inactive.setStyleSheet(widgetStyle_tabInactive)
         self.button_inactive.setAttribute(Qt.WA_TranslucentBackground)
         self.button_inactive.setToolTip(self.title)
@@ -272,6 +248,9 @@ class QSATab(QFrame):
         self.layout.addWidget(self.filler, row, 0, 1, 5)
 
         self.setLayout(self.layout)
+
+    def onClick(self):
+        return
 
     def contextMenuEvent(self, event):
         contextMenu = QMenu()
@@ -371,10 +350,10 @@ class QSATabWidget(QTabWidget):
         self.pages = pages
         self.index_previous = 0
         for i, page in enumerate(pages):
-            self.addTab(page, "")#, page.title)
+            self.addTab(page, "")
             if page.icon:
-                #self.setTabIcon(i, page.icon)
                 self.tabBar().setTabButton(i, QTabBar.LeftSide, page.button_inactive)
+            page.parent = self
 
     def previousIndex(self):
         return self.index_previous
@@ -508,7 +487,6 @@ class QSAConstantsPopup(QSAPopup):
     def constants(self):
         return self._constants
 
-
     def populate(self):
         """Fill in the window with the provided list of widgets"""
         row = 0
@@ -543,7 +521,6 @@ class QSAVariableFrame(QSABaseFrame):
         self.layout.setContentsMargins(5, 1, 5, 1)
 
         self.constants = constants
-
 
         if len(self.constants):
             self.button_expand = QSAPlusButton()
@@ -625,6 +602,7 @@ class QSAEntry(QSAVariableFrame):
         self.mode = self.parameter.mode
         self.value_min = self.parameter.value_min
         self.value_max = self.parameter.value_max
+        self.isValueUpdated = False
 
         self.row = row
         self.column = column
@@ -633,7 +611,6 @@ class QSAEntry(QSAVariableFrame):
         self.command = self.parameter.command
 
         self.spinbox_set = QDoubleSpinBox()
-        #self.spinbox_set.setFixedWidth(80)
         self.parameter.variable.bind_to(self.updateValue)
         self.spinbox_set.setButtonSymbols(2)
         self.spinbox_set.setMinimum(self.value_min)
@@ -641,6 +618,8 @@ class QSAEntry(QSAVariableFrame):
         self.spinbox_set.setDecimals(self.precision)
         self.spinbox_set.setSingleStep(10**-self.precision)     # Step size is the smallest visible decimal digit
         self.spinbox_set.setContextMenuPolicy(Qt.PreventContextMenu)
+        self.spinbox_set.editingFinished.connect(self.editFinishedCallback)
+        self.spinbox_set.valueChanged.connect(self.valueChangedCallback)
         self.label_units = QLabel()
         self.label_units.setText(self.units)
 
@@ -680,6 +659,17 @@ class QSAEntry(QSAVariableFrame):
         if len(var) > 8:
             var = var[:8]
         return self.command + 'W' + var
+
+    def valueChangedCallback(self):
+        self.isValueUpdated = True
+
+    def editFinishedCallback(self):
+        if self.isValueUpdated:
+            self.isValueUpdated = False
+            self.onEditingFinished()
+
+    def onEditingFinished(self):
+        return
 
 
 class QSAConstantEntry(QSAEntry):
@@ -907,8 +897,7 @@ class QSAPushbutton(QSAVariableFrame):
                  row=0, column=0, index=0,
                  parameter=None,
                  text=""
-                 ):
-
+        ):
         super().__init__(master=master, row=row, column=column, index=index, parameter=parameter, text=text)
 
         self.layout.removeWidget(self.label)
@@ -919,7 +908,6 @@ class QSAPushbutton(QSAVariableFrame):
         self.button.setStyleSheet(widgetStyle_QSAPushbutton)
 
         self.layout.addWidget(self.button, 0, 0)
-
         self.button.clicked.connect(self.onClick)
 
     def onClick(self):
@@ -987,7 +975,7 @@ class QSAToggleButton(QSAPushbutton):
 class QSAToggleButtonLive(QSAToggleButton):
     """A toggle button which sends commands instantly and also polls"""
     def __init__(self, master=None,
-                 serial=None, interval=0,
+                 interval=0,
                  row=0, column=0, index=0,
                  parameter=None,
                  offText = "Disabled", onText = "Enabled",
@@ -1023,7 +1011,7 @@ class QSAToggleButtonLive(QSAToggleButton):
     def poll(self):
         """Read the parameter at a regular interval"""
         if len(self.parameter.command):
-            self.master.serial.sendSerial(message = self.getReadCommand())
+            self.master.serial.sendSerial(message=self.getReadCommand())
 
     def updateValue(self, value):
         """Update the button state and send a command when the button is pressed"""
@@ -1048,9 +1036,7 @@ class QSAPlusButton(QPushButton):
         self.setToolTip("Edit constants")
         self.setFixedWidth(25)
         self.setFixedHeight(25)
-
         self.setStyleSheet(widgetStyle_QSAPushbutton)
-        #self.setGraphicsEffect(QSADropShadow(parent=self))
 
 
 class QSALine(QFrame):
@@ -1073,6 +1059,7 @@ class QSAImage(QLabel):
         self.master = master
         self.image = image
         self.widget = None
+        self.pixmap = None
 
     def fillImage(self):
         self.setAutoFillBackground(True)
@@ -1081,6 +1068,3 @@ class QSAImage(QLabel):
             self.setPixmap(self.pixmap)
             self.resize(self.pixmap.width(), self.pixmap.height())
             self.show()
-
-    def setAdminMode(self, adminMode=False):
-        self.show()
